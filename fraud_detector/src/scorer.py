@@ -9,7 +9,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 MODEL_PATH = Path(os.getenv("MODEL_PATH", "./models/lgb.txt"))
-THRESHOLD = float(os.getenv("MODEL_THR", "0.59"))
+THRESHOLD = float(os.getenv("MODEL_THR", "0.98"))
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(
