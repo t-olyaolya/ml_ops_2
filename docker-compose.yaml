@@ -96,7 +96,53 @@ services:
     ports:
       - "8501:8501"
 
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: scorer
+      POSTGRES_PASSWORD: scorer_pass
+      POSTGRES_DB: scoring_db
+    networks:
+      - ml-scorer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+#для подключения к postges из браузера
+  pgadmin:
+    image: dpage/pgadmin4
+    networks:
+      - ml-scorer
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+
+  score-writer:
+    build: ./score_writer
+    depends_on:
+      - kafka
+      - postgres
+    networks:
+      - ml-scorer
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_SCORING_TOPIC: scoring
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: scoring_db
+      POSTGRES_USER: scorer
+      POSTGRES_PASSWORD: scorer_pass
+
 networks:
   ml-scorer:
     name: ml-scorer
     driver: bridge
+
+volumes:
+  pgdata:

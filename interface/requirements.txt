@@ -13,11 +13,13 @@ Jinja2==3.1.6
 jsonschema==4.23.0
 jsonschema-specifications==2025.4.1
 kafka-python==2.2.6
+matplotlib==3.9.4
 MarkupSafe==3.0.2
 narwhals==1.38.2
 numpy==2.0.2
 openpyxl==3.1.5
 packaging==24.2
+psycopg2-binary
 pandas==2.2.3
 pillow==11.2.1
 protobuf==6.30.2
@@ -38,3 +40,4 @@ typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 watchdog==6.0.0
+

@@ -5,12 +5,55 @@ import json
 import time
 import os
 import uuid
+import psycopg2
+import matplotlib.pyplot as plt
+
+POSTGRES_CONFIG = {
+    "host": os.getenv("POSTGRES_HOST", "postgres"),
+    "port": os.getenv("POSTGRES_PORT", "5432"),
+    "dbname": os.getenv("POSTGRES_DB", "scoring_db"),
+    "user": os.getenv("POSTGRES_USER", "scorer"),
+    "password": os.getenv("POSTGRES_PASSWORD", "scorer_pass"),
+}
+
 
 # Конфигурация Kafka
 KAFKA_CONFIG = {
     "bootstrap_servers": os.getenv("KAFKA_BROKERS", "kafka:9092"),
     "topic": os.getenv("KAFKA_TOPIC", "transactions")
 }
+
+def get_results():
+    conn = psycopg2.connect(**POSTGRES_CONFIG)
+    cur = conn.cursor()
+
+    # 10 последних fraud-транзакций
+    cur.execute("""
+        SELECT transaction_id, score, fraud_flag
+        FROM scoring_results
+        WHERE fraud_flag = true
+        ORDER BY transaction_id DESC
+        LIMIT 10;
+    """)
+    fraud_rows = cur.fetchall()
+
+    # Последние 100 транзакций по убыванию
+    cur.execute("""
+        SELECT score
+        FROM scoring_results
+        ORDER BY transaction_id DESC
+        LIMIT 100;
+    """)
+    score_rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    fraud_df = pd.DataFrame(fraud_rows, columns=["transaction_id", "score", "fraud_flag"])
+    scores = [s[0] for s in score_rows]
+
+    return fraud_df, scores
+
 
 def load_file(uploaded_file):
     """Загрузка CSV файла в DataFrame"""
@@ -100,3 +143,27 @@ if st.session_state.uploaded_files:
                             st.rerun()
                 else:
                     st.error("Файл не содержит данных")
+
+st.markdown("---")
+st.subheader("📊 Анализ результатов скоринга")
+
+if st.button("Посмотреть результаты"):
+    with st.spinner("Загрузка из базы данных..."):
+        fraud_df, score_list = get_results()
+
+        if fraud_df.empty:
+            st.info("Нет транзакций с флагом fraud.")
+        else:
+            st.markdown("### 🔍 Последние 10 фродовых транзакций:")
+            st.dataframe(fraud_df)
+
+        if score_list:
+            st.markdown("### 📈 Распределение скоров (последние 100):")
+            fig, ax = plt.subplots()
+            ax.hist(score_list, bins=20)
+            ax.set_xlabel("Score")
+            ax.set_ylabel("Количество")
+            ax.set_title("Гистограмма score")
+            st.pyplot(fig)
+        else:
+            st.info("Нет данных для построения гистограммы.")
